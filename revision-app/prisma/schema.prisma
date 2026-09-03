@@ -1,0 +1,315 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Prisma enums are not supported on SQLite, so status/category fields below
+// are plain Strings with allowed values validated in application code (see lib/validation).
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  exams        Exam[]
+  testAttempts TestAttempt[]
+}
+
+model Exam {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  examDate  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  availability  StudyAvailability[]
+  subjects      Subject[]
+  revisionTasks RevisionTask[]
+  questionSets  QuestionSet[]
+  mockTests     MockTest[]
+
+  @@index([userId])
+}
+
+model StudyAvailability {
+  id        String   @id @default(cuid())
+  examId    String
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  dayOfWeek Int // 0 = Sunday .. 6 = Saturday
+  startTime String // "19:00"
+  endTime   String // "22:00"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([examId])
+}
+
+model Subject {
+  id        String   @id @default(cuid())
+  examId    String
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chapters     Chapter[]
+  questionSets QuestionSet[]
+
+  @@index([examId])
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topics       Topic[]
+  questionSets QuestionSet[]
+
+  @@index([subjectId])
+}
+
+model Topic {
+  id                       String   @id @default(cuid())
+  chapterId                String
+  chapter                  Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  name                     String
+  estimatedRevisionMinutes Int      @default(30)
+  difficulty               String   @default("medium") // easy | medium | hard
+  importance                String   @default("medium") // low | medium | high
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  revisionTasks       RevisionTask[]
+  revisionHistory     RevisionHistory[]
+  questions           Question[]
+  questionSets        QuestionSet[]
+  performanceProfile  TopicPerformanceProfile?
+
+  @@index([chapterId])
+}
+
+model RevisionTask {
+  id               String    @id @default(cuid())
+  examId           String
+  exam             Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  topicId          String
+  topic            Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  revisionNumber   Int
+  scheduledDate    DateTime
+  estimatedMinutes Int
+  status           String    @default("scheduled") // scheduled | due | completed | overdue | cancelled
+  priorityScore    Float     @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
+
+  history RevisionHistory[]
+
+  @@index([examId, scheduledDate])
+  @@index([topicId])
+}
+
+model RevisionHistory {
+  id               String       @id @default(cuid())
+  topicId          String
+  topic            Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  revisionTaskId   String
+  revisionTask     RevisionTask @relation(fields: [revisionTaskId], references: [id], onDelete: Cascade)
+  revisionNumber   Int
+  completedAt      DateTime     @default(now())
+  confidence       String? // strong | okay | weak
+  estimatedMinutes Int
+  createdAt        DateTime     @default(now())
+
+  @@index([topicId])
+}
+
+model QuestionSet {
+  id        String   @id @default(cuid())
+  examId    String
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  name      String
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id])
+  chapterId String?
+  chapter   Chapter? @relation(fields: [chapterId], references: [id])
+  topicId   String?
+  topic     Topic?   @relation(fields: [topicId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sourceImages QuestionSourceImage[]
+  questions    Question[]
+
+  @@index([examId])
+}
+
+model QuestionSourceImage {
+  id               String      @id @default(cuid())
+  questionSetId    String
+  questionSet      QuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
+  storagePath      String
+  originalFileName String
+  mimeType         String
+  processingStatus String      @default("uploaded") // uploaded | processing | completed | failed
+  errorMessage     String?
+  createdAt        DateTime    @default(now())
+  processedAt      DateTime?
+
+  questions Question[]
+
+  @@index([questionSetId])
+}
+
+model Question {
+  id              String               @id @default(cuid())
+  questionSetId   String
+  questionSet     QuestionSet          @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
+  sourceImageId   String?
+  sourceImage     QuestionSourceImage? @relation(fields: [sourceImageId], references: [id])
+  topicId         String?
+  topic           Topic?               @relation(fields: [topicId], references: [id])
+  questionText    String
+  approvalStatus  String               @default("draft") // draft | needs_review | approved | rejected
+  correctOptionId String?              @unique
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  options       QuestionOption[]
+  testQuestions MockTestQuestion[]
+
+  @@index([questionSetId])
+  @@index([topicId])
+}
+
+model QuestionOption {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  label      String // A, B, C, D...
+  text       String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([questionId])
+}
+
+model MockTest {
+  id                        String   @id @default(cuid())
+  examId                    String
+  exam                      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  name                      String
+  timeLimitMinutes          Int
+  marksPerCorrect           Float    @default(1)
+  negativeMarksPerIncorrect Float    @default(0)
+  status                    String   @default("ready") // draft | ready | archived
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  testQuestions MockTestQuestion[]
+  attempts      TestAttempt[]
+
+  @@index([examId])
+}
+
+model MockTestQuestion {
+  id         String   @id @default(cuid())
+  mockTestId String
+  mockTest   MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([mockTestId])
+}
+
+model TestAttempt {
+  id               String    @id @default(cuid())
+  mockTestId       String
+  mockTest         MockTest  @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt        DateTime  @default(now())
+  endsAt           DateTime
+  submittedAt      DateTime?
+  status           String    @default("in_progress") // in_progress | submitted | auto_submitted | expired
+  score            Float?
+  correctCount     Int?
+  incorrectCount   Int?
+  skippedCount     Int?
+  attemptedCount   Int?
+  accuracy         Float?
+  totalTimeSeconds Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  attemptQuestions AttemptQuestion[]
+
+  @@index([mockTestId])
+  @@index([userId])
+}
+
+model AttemptQuestion {
+  id                    String      @id @default(cuid())
+  testAttemptId         String
+  testAttempt           TestAttempt @relation(fields: [testAttemptId], references: [id], onDelete: Cascade)
+  originalQuestionId    String
+  topicId               String?
+  questionTextSnapshot  String
+  optionsSnapshot       String // JSON-encoded array of { label, text }
+  correctAnswerSnapshot String // option label
+  sortOrder             Int         @default(0)
+  createdAt             DateTime    @default(now())
+
+  answer AttemptAnswer?
+
+  @@index([testAttemptId])
+}
+
+model AttemptAnswer {
+  id                  String          @id @default(cuid())
+  attemptQuestionId   String          @unique
+  attemptQuestion     AttemptQuestion @relation(fields: [attemptQuestionId], references: [id], onDelete: Cascade)
+  selectedOptionLabel String?
+  answerStatus        String          @default("not_visited") // not_visited | unanswered | answered | marked_for_review | answered_marked_for_review
+  isMarkedForReview   Boolean         @default(false)
+  firstAnsweredAt     DateTime?
+  lastAnsweredAt      DateTime?
+  answerChangeCount   Int             @default(0)
+  timeSpentSeconds    Int             @default(0)
+  isCorrect           Boolean?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model TopicPerformanceProfile {
+  id                    String   @id @default(cuid())
+  topicId               String   @unique
+  topic                 Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questionsAttempted    Int      @default(0)
+  correctAnswers        Int      @default(0)
+  incorrectAnswers      Int      @default(0)
+  skippedAnswers        Int      @default(0)
+  accuracy              Float?
+  averageTimeSeconds    Float?
+  recentAccuracy        Float?
+  performanceTrend      String? // improving | stable | declining
+  attentionLevel        String   @default("limited_data") // high_attention | needs_attention | stable | strong | limited_data
+  revisionPriorityScore Float    @default(0)
+  updatedAt             DateTime @updatedAt
+}
