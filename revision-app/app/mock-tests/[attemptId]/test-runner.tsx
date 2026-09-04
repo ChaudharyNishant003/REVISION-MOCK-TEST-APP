@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { saveAnswerAction, submitAttemptAction } from "@/lib/actions/mockTest";
+import { saveAnswerAction, submitAttemptAction, addTimeSpentAction } from "@/lib/actions/mockTest";
 
 type Question = {
   id: string;
@@ -45,6 +45,22 @@ export default function TestRunner({
       startTransition(() => submitAttemptAction(attemptId));
     }
   }, [remainingMs, attemptId]);
+
+  // Active-time tracking per question (Document 03 §18): counts seconds only while this
+  // question is on screen and the tab is visible, and flushes them when we navigate away.
+  useEffect(() => {
+    const questionId = questions[current]?.id;
+    if (!questionId) return;
+    let seconds = 0;
+    const interval = setInterval(() => {
+      if (!document.hidden) seconds += 1;
+    }, 1000);
+    return () => {
+      clearInterval(interval);
+      if (seconds > 0) addTimeSpentAction(questionId, seconds);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
 
   const question = questions[current];
   const answeredCount = questions.filter((q) => q.selectedOptionLabel != null).length;

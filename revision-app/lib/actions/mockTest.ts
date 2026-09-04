@@ -105,6 +105,19 @@ export async function saveAnswerAction(
   });
 }
 
+/** Adds active viewing time to a question, per Document 03 §18. Ignored once the attempt is final. */
+export async function addTimeSpentAction(attemptQuestionId: string, deltaSeconds: number) {
+  const userId = await requireUserId();
+  const aq = await assertOwnedAttemptQuestion(attemptQuestionId, userId);
+  if (!aq || aq.testAttempt.status !== "in_progress") return;
+  if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
+
+  await prisma.attemptAnswer.update({
+    where: { attemptQuestionId },
+    data: { timeSpentSeconds: { increment: Math.min(300, Math.round(deltaSeconds)) } },
+  });
+}
+
 /** Deterministic scoring per Document 03 §25 — never touched by AI. */
 export async function submitAttemptAction(attemptId: string) {
   const userId = await requireUserId();

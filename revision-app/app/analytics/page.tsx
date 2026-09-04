@@ -15,6 +15,49 @@ const ATTENTION_LABEL: Record<string, string> = {
   limited_data: "Limited data",
 };
 
+const TREND_ICON: Record<string, string> = {
+  improving: "↑",
+  declining: "↓",
+  stable: "→",
+};
+
+function formatAverageTime(seconds: number | null): string {
+  if (seconds == null) return "";
+  const rounded = Math.round(seconds);
+  if (rounded < 60) return `${rounded}s avg`;
+  return `${Math.floor(rounded / 60)}m ${rounded % 60}s avg`;
+}
+
+/** Score-over-time sparkline for the last (up to 10) submitted attempts, oldest to newest. */
+function AccuracyTrend({ attempts }: { attempts: { accuracy: number | null }[] }) {
+  const scores = attempts.map((a) => a.accuracy ?? 0).reverse();
+  if (scores.length < 2) return null;
+
+  const width = 220;
+  const height = 54;
+  const padX = 4;
+  const padY = 6;
+  const stepX = (width - padX * 2) / (scores.length - 1);
+  const y = (score: number) => padY + (height - padY * 2) * (1 - score / 100);
+  const points = scores.map((score, i) => [padX + i * stepX, y(score)] as const);
+  const linePath = points.map(([x, py], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${py.toFixed(1)}`).join(" ");
+  const areaPath = `${linePath} L${points[points.length - 1][0].toFixed(1)},${height - padY} L${points[0][0].toFixed(1)},${height - padY} Z`;
+  const last = points[points.length - 1];
+  const lastScore = scores[scores.length - 1];
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-label={`Accuracy across the last ${scores.length} mock tests, ending at ${Math.round(lastScore)}%`}>
+      <line x1={padX} y1={y(50)} x2={width - padX} y2={y(50)} stroke="var(--line)" strokeWidth="1" strokeDasharray="2 3" />
+      <path d={areaPath} fill="var(--coral-soft)" opacity="0.7" />
+      <path d={linePath} fill="none" stroke="var(--coral)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={last[0]} cy={last[1]} r="3.2" fill="var(--coral)" />
+      <text x={last[0]} y={Math.max(9, last[1] - 7)} textAnchor="end" fontSize="9" fontWeight="700" fill="var(--coral)">
+        {Math.round(lastScore)}%
+      </text>
+    </svg>
+  );
+}
+
 export default async function AnalyticsPage() {
   const userId = await requireUserId();
   const user = await getCurrentUser();
@@ -49,6 +92,10 @@ export default async function AnalyticsPage() {
                 <span>topics revised</span>
               </div>
               <div>
+                <strong>{progress.totalTopics - progress.revisedTopics}</strong>
+                <span>never revised</span>
+              </div>
+              <div>
                 <strong>{progress.overdue}</strong>
                 <span>overdue</span>
               </div>
@@ -73,6 +120,15 @@ export default async function AnalyticsPage() {
                 </div>
               ) : null}
             </div>
+            {attempts.length >= 2 ? (
+              <div style={{ marginTop: "16px" }}>
+                <AccuracyTrend attempts={attempts} />
+                <div className="progress-meta" style={{ marginTop: "2px" }}>
+                  <span>Oldest of last {attempts.length}</span>
+                  <span>Most recent</span>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <section className="attention-panel panel" style={{ gridColumn: "1 / -1" }}>
@@ -104,6 +160,15 @@ export default async function AnalyticsPage() {
                     <span>
                       {profile.topic.chapter.subject.name} · {ATTENTION_LABEL[profile.attentionLevel]} ·{" "}
                       {profile.questionsAttempted} question{profile.questionsAttempted === 1 ? "" : "s"} attempted
+                      {profile.averageTimeSeconds != null ? ` · ${formatAverageTime(profile.averageTimeSeconds)}` : ""}
+                      {profile.performanceTrend ? (
+                        <>
+                          {" "}
+                          · <span title={`Recent trend: ${profile.performanceTrend}`}>
+                            {TREND_ICON[profile.performanceTrend]} {profile.performanceTrend}
+                          </span>
+                        </>
+                      ) : null}
                     </span>
                   </div>
                   <span className="attention-score">{profile.accuracy != null ? `${Math.round(profile.accuracy)}%` : "—"}</span>

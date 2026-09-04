@@ -6,7 +6,9 @@ import { getCurrentUserExam } from "@/lib/data/exam";
 import AddSubjectForm from "./add-subject-form";
 import AddChapterForm from "./add-chapter-form";
 import AddTopicForm from "./add-topic-form";
-import DeleteTopicButton from "./delete-topic-button";
+import SubjectHeader from "./subject-header";
+import ChapterHeader from "./chapter-header";
+import TopicRow from "./topic-row";
 import GeneratePlanButton from "./generate-plan-button";
 
 export default async function SyllabusPage() {
@@ -41,21 +43,13 @@ export default async function SyllabusPage() {
         ) : (
           exam.subjects.map((subject) => (
             <div className="syllabus-subject" key={subject.id}>
-              <h3>{subject.name}</h3>
+              <SubjectHeader subjectId={subject.id} name={subject.name} />
               <AddChapterForm subjectId={subject.id} />
               {subject.chapters.map((chapter) => (
                 <div className="syllabus-chapter" key={chapter.id}>
-                  <h4>{chapter.name}</h4>
+                  <ChapterHeader chapterId={chapter.id} name={chapter.name} />
                   {chapter.topics.map((topic) => (
-                    <div className="syllabus-topic-row" key={topic.id}>
-                      <span>
-                        {topic.name}
-                        <span className="syllabus-topic-meta">
-                          {topic.estimatedRevisionMinutes} min · {topic.difficulty} · {topic.importance} importance
-                        </span>
-                      </span>
-                      <DeleteTopicButton topicId={topic.id} />
-                    </div>
+                    <TopicRow key={topic.id} topic={topic} />
                   ))}
                   <AddTopicForm chapterId={chapter.id} />
                 </div>

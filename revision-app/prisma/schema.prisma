@@ -14,6 +14,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
+  openaiApiKey String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -189,8 +190,9 @@ model Question {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
-  options       QuestionOption[]
-  testQuestions MockTestQuestion[]
+  options            QuestionOption[]
+  testQuestions      MockTestQuestion[]
+  extractionMetadata QuestionExtractionMetadata?
 
   @@index([questionSetId])
   @@index([topicId])
@@ -295,6 +297,31 @@ model AttemptAnswer {
   isCorrect           Boolean?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
+}
+
+model AiProcessingJob {
+  id            String    @id @default(cuid())
+  questionSetId String
+  sourceImageId String
+  jobType       String    @default("mcq_extraction") // mcq_extraction
+  status        String    @default("queued") // queued | processing | completed | failed
+  errorMessage  String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([questionSetId])
+  @@index([sourceImageId])
+}
+
+model QuestionExtractionMetadata {
+  id                     String   @id @default(cuid())
+  questionId             String   @unique
+  question               Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  aiConfidence           Float?
+  rawExtractionReference String?
+  requiresReview         Boolean  @default(false)
+  createdAt              DateTime @default(now())
 }
 
 model TopicPerformanceProfile {

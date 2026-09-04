@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { reprioritizeTopic } from "@/lib/scheduler/reprioritize";
 
 const MIN_QUESTIONS_FOR_A_VERDICT = 3;
 const RECENT_WINDOW = 10;
@@ -37,6 +38,8 @@ export async function updateTopicPerformanceForAttempt(attemptId: string): Promi
     const incorrect = attempted.length - correct;
     const skipped = answers.length - attempted.length;
     const accuracy = attempted.length > 0 ? (correct / attempted.length) * 100 : null;
+    const averageTimeSeconds =
+      attempted.length > 0 ? attempted.reduce((sum, a) => sum + a.timeSpentSeconds, 0) / attempted.length : null;
 
     const recent = attempted.slice(0, RECENT_WINDOW);
     const recentAccuracy = recent.length > 0 ? (recent.filter((a) => a.isCorrect).length / recent.length) * 100 : null;
@@ -70,6 +73,7 @@ export async function updateTopicPerformanceForAttempt(attemptId: string): Promi
         incorrectAnswers: incorrect,
         skippedAnswers: skipped,
         accuracy,
+        averageTimeSeconds,
         recentAccuracy,
         performanceTrend,
         attentionLevel,
@@ -81,11 +85,16 @@ export async function updateTopicPerformanceForAttempt(attemptId: string): Promi
         incorrectAnswers: incorrect,
         skippedAnswers: skipped,
         accuracy,
+        averageTimeSeconds,
         recentAccuracy,
         performanceTrend,
         attentionLevel,
         revisionPriorityScore,
       },
     });
+
+    // Feed this attempt's performance back into the scheduler so tomorrow's task order
+    // reflects it immediately, without moving any dates or rebuilding the plan.
+    await reprioritizeTopic(topicId);
   }
 }

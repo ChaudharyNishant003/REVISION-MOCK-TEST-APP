@@ -55,3 +55,30 @@ export const completeRevisionSchema = z.object({
   taskId: z.string().min(1),
   confidence: z.enum(CONFIDENCE_LEVELS).optional(),
 });
+
+export const mockTestSchema = z.object({
+  name: z.string().trim().min(1, "Test name is required").max(120),
+  timeLimitMinutes: z.coerce.number().int().min(1, "Duration must be at least 1 minute").max(300),
+  marksPerCorrect: z.coerce.number().min(0.01, "Marks per correct answer must be positive").max(100),
+  negativeMarksPerIncorrect: z.coerce.number().min(0, "Negative marks can't be negative").max(100),
+  questionIds: z.array(z.string().min(1)).min(1, "Select at least one question"),
+});
+
+export const questionSetSchema = z.object({
+  name: z.string().trim().min(1, "Question set name is required").max(120),
+  topicId: z.string().min(1).optional().or(z.literal("")),
+});
+
+export const openaiApiKeySchema = z.object({
+  apiKey: z.string().trim().min(1).refine((val) => val.startsWith("sk-"), "OpenAI API keys start with \"sk-\""),
+});
+
+export const draftQuestionSchema = z.object({
+  questionId: z.string().min(1),
+  questionText: z.string().trim().min(1, "Question text is required").max(2000),
+  topicId: z.string().min(1).optional().or(z.literal("")),
+  correctLabel: z.string().min(1, "Select the correct option"),
+  options: z
+    .array(z.object({ id: z.string().min(1).optional(), label: z.string().min(1), text: z.string().trim().min(1, "Option text can't be empty").max(500) }))
+    .min(2, "At least two options are required"),
+});

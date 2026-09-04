@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { requireUserId } from "@/lib/session";
 import { getAttemptForUser } from "@/lib/data/mockTestAttempt";
+import ResultQuestionList from "./result-question-list";
 
 export default async function AttemptResultPage({ params }: { params: Promise<{ attemptId: string }> }) {
   const { attemptId } = await params;
@@ -51,38 +52,30 @@ export default async function AttemptResultPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        <div>
-          {attempt.attemptQuestions.map((aq, index) => {
+        <ResultQuestionList
+          items={attempt.attemptQuestions.map((aq, index) => {
+            const options = JSON.parse(aq.optionsSnapshot) as { label: string; text: string }[];
             const selected = aq.answer?.selectedOptionLabel ?? null;
             const status = selected == null ? "skipped" : selected === aq.correctAnswerSnapshot ? "correct" : "incorrect";
-            const options = JSON.parse(aq.optionsSnapshot) as { label: string; text: string }[];
-            return (
-              <div className="review-row" key={aq.id}>
-                <h3>
-                  Q{index + 1}. {aq.questionTextSnapshot}
-                </h3>
-                <div className="review-answer">
-                  <span className={`review-tag ${status}`}>{status}</span>
-                  <span>
-                    Your answer: {selected ? `${selected}. ${options.find((o) => o.label === selected)?.text}` : "Not answered"}
-                  </span>
-                </div>
-                {status !== "correct" && (
-                  <div className="review-answer">
-                    <span className="review-tag correct">Correct</span>
-                    <span>
-                      {aq.correctAnswerSnapshot}. {options.find((o) => o.label === aq.correctAnswerSnapshot)?.text}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
+            return {
+              id: aq.id,
+              index: index + 1,
+              questionText: aq.questionTextSnapshot,
+              status,
+              selectedLabel: selected,
+              selectedText: selected ? options.find((o) => o.label === selected)?.text ?? null : null,
+              correctLabel: aq.correctAnswerSnapshot,
+              correctText: options.find((o) => o.label === aq.correctAnswerSnapshot)?.text,
+            };
           })}
-        </div>
+        />
 
         <div className="result-actions">
           <Link className="outline-button" href="/mock-tests">
             Test history
+          </Link>
+          <Link className="outline-button" href="/analytics">
+            Topic performance
           </Link>
           <Link className="outline-button" href="/">
             Return home

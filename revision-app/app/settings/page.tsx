@@ -2,8 +2,10 @@ import { redirect } from "next/navigation";
 
 import { requireUserId, getCurrentUser } from "@/lib/session";
 import { getCurrentUserExam } from "@/lib/data/exam";
+import { getMaskedOpenAiKey } from "@/lib/data/user";
 import Sidebar from "@/components/sidebar";
 import EditExamForm from "./edit-exam-form";
+import OpenAiKeyForm from "./openai-key-form";
 import AvailabilityForm from "../onboarding/availability/availability-form";
 import RemoveSlotButton from "../onboarding/availability/remove-slot-button";
 
@@ -15,6 +17,8 @@ export default async function SettingsPage() {
   const exam = await getCurrentUserExam(userId);
 
   if (!exam) redirect("/onboarding/exam");
+
+  const maskedOpenAiKey = await getMaskedOpenAiKey(userId);
 
   return (
     <main className="app-shell">
@@ -53,6 +57,13 @@ export default async function SettingsPage() {
               ))
             )}
           </div>
+        </section>
+
+        <section className="onboarding-card" style={{ maxWidth: "none", margin: "20px 0 0" }}>
+          <div className="panel-kicker" style={{ marginBottom: "16px" }}>
+            OPENAI API KEY
+          </div>
+          <OpenAiKeyForm maskedKey={maskedOpenAiKey} />
         </section>
       </section>
     </main>

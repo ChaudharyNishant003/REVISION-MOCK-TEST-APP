@@ -6,63 +6,61 @@ import { getCurrentUserExam } from "@/lib/data/exam";
 import { prisma } from "@/lib/prisma";
 import { getAttemptHistory } from "@/lib/data/mockTestAttempt";
 import StartTestButton from "./start-test-button";
+import ArchiveMockTestButton from "./archive-mock-test-button";
 
 export default async function MockTestsPage() {
   const userId = await requireUserId();
   const exam = await getCurrentUserExam(userId);
   if (!exam) redirect("/onboarding/exam");
 
-  const [mockTest, history] = await Promise.all([
-    prisma.mockTest.findFirst({
-      where: { examId: exam.id },
+  const [mockTests, history] = await Promise.all([
+    prisma.mockTest.findMany({
+      where: { examId: exam.id, status: { not: "archived" } },
       include: { testQuestions: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
     }),
     getAttemptHistory(userId, exam.id),
   ]);
-
-  if (!mockTest) {
-    return (
-      <main className="test-page">
-        <Link className="back-link" href="/">
-          ← Back to dashboard
-        </Link>
-        <section className="test-intro">
-          <div className="panel-kicker">MOCK TESTS</div>
-          <h1>No tests yet</h1>
-          <p>Upload MCQ questions to create your first mock test.</p>
-        </section>
-      </main>
-    );
-  }
 
   return (
     <main className="test-page">
       <Link className="back-link" href="/">
         ← Back to dashboard
       </Link>
-      <section className="test-intro">
-        <div className="panel-kicker">MOCK TEST</div>
-        <h1>{mockTest.name}</h1>
-        <p>
-          {mockTest.testQuestions.length} questions · {mockTest.timeLimitMinutes} minutes
-        </p>
-        <div className="test-rules">
-          <div>
-            <strong>+{mockTest.marksPerCorrect}</strong>
-            <span>correct answer</span>
-          </div>
-          <div>
-            <strong>0</strong>
-            <span>unanswered</span>
-          </div>
-          <div>
-            <strong>-{mockTest.negativeMarksPerIncorrect}</strong>
-            <span>incorrect answer</span>
-          </div>
+      <section className="test-intro" style={{ margin: "14vh auto 0" }}>
+        <div className="panel-kicker">MOCK TESTS</div>
+        <h1 style={{ fontSize: "clamp(26px, 4vw, 38px)" }}>{mockTests.length} test{mockTests.length === 1 ? "" : "s"} ready</h1>
+        <p>Sit any test below under real timed conditions, or build a new one from your approved question bank.</p>
+        <div style={{ marginTop: "22px" }}>
+          <Link className="primary-button" href="/mock-tests/new">
+            Create test <span>→</span>
+          </Link>
         </div>
-        <StartTestButton mockTestId={mockTest.id} />
       </section>
+
+      {mockTests.length === 0 ? (
+        <section className="test-intro" style={{ marginTop: "24px" }}>
+          <p className="empty-state">No tests yet. Create one once you have approved questions in your bank.</p>
+        </section>
+      ) : (
+        <section className="test-intro" style={{ marginTop: "24px" }}>
+          <div className="task-list">
+            {mockTests.map((mockTest) => (
+              <article className="task-row" key={mockTest.id}>
+                <div className="task-info">
+                  <strong>{mockTest.name}</strong>
+                  <span>
+                    {mockTest.testQuestions.length} questions · {mockTest.timeLimitMinutes} min · +{mockTest.marksPerCorrect}/−
+                    {mockTest.negativeMarksPerIncorrect}
+                  </span>
+                </div>
+                <ArchiveMockTestButton mockTestId={mockTest.id} name={mockTest.name} />
+                <StartTestButton mockTestId={mockTest.id} />
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {history.length > 0 ? (
         <section className="test-intro" style={{ marginTop: "24px" }}>
