@@ -54,12 +54,16 @@ export async function updateTopicPerformanceForAttempt(attemptId: string): Promi
 
     let performanceTrend: string | null = null;
     if (attempted.length >= MIN_QUESTIONS_FOR_A_VERDICT * 2) {
-      const olderHalf = attempted.slice(recent.length);
-      const olderAccuracy = olderHalf.length > 0 ? (olderHalf.filter((a) => a.isCorrect).length / olderHalf.length) * 100 : null;
-      if (recentAccuracy != null && olderAccuracy != null) {
-        const delta = recentAccuracy - olderAccuracy;
-        performanceTrend = delta > 8 ? "improving" : delta < -8 ? "declining" : "stable";
-      }
+      // Split the available answers (newest first) down the middle and compare the halves.
+      // Slicing at RECENT_WINDOW instead would leave the older half empty for anyone with
+      // 6-10 answers, so no trend could ever appear at this guard's own threshold.
+      const midpoint = Math.floor(attempted.length / 2);
+      const newerHalf = attempted.slice(0, midpoint);
+      const olderHalf = attempted.slice(midpoint);
+      const newerAccuracy = (newerHalf.filter((a) => a.isCorrect).length / newerHalf.length) * 100;
+      const olderAccuracy = (olderHalf.filter((a) => a.isCorrect).length / olderHalf.length) * 100;
+      const delta = newerAccuracy - olderAccuracy;
+      performanceTrend = delta > 8 ? "improving" : delta < -8 ? "declining" : "stable";
     }
 
     const revisionPriorityScore = accuracy != null ? Math.max(0, 100 - accuracy) : 0;

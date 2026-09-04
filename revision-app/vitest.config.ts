@@ -8,6 +8,9 @@ export default defineConfig({
     globals: true,
     // Integration tests share one SQLite test database, so they must not run concurrently.
     fileParallelism: false,
+    // The first integration file pays for `prisma migrate deploy` (~20s) in its beforeAll.
+    hookTimeout: 90_000,
+    testTimeout: 20_000,
     // Component tests opt into jsdom per-file via a `@vitest-environment jsdom` docblock
     // (environmentMatchGlobs was removed in Vitest 5).
     setupFiles: ["tests/setup/env.ts"],
