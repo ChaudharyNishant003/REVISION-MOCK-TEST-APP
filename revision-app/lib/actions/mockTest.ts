@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { updateTopicPerformanceForAttempt } from "@/lib/analytics/updateTopicPerformance";
+import { calculateAttemptScore } from "@/lib/mockTests/scoring";
+import { resolveAnswerStatus, cappedTimeIncrement } from "@/lib/mockTests/answerStatus";
 
 /** Starts a fresh, timed attempt: snapshots questions/options so later edits never change history (Document 03 §13). */
 export async function startTestAttemptAction(mockTestId: string) {
@@ -86,11 +88,7 @@ export async function saveAnswerAction(
   const answered = selectedOptionLabel != null;
   const changed = existing?.selectedOptionLabel != null && existing.selectedOptionLabel !== selectedOptionLabel;
 
-  let answerStatus: string;
-  if (answered && isMarkedForReview) answerStatus = "answered_marked_for_review";
-  else if (answered) answerStatus = "answered";
-  else if (isMarkedForReview) answerStatus = "marked_for_review";
-  else answerStatus = "unanswered";
+  const answerStatus = resolveAnswerStatus(answered, isMarkedForReview);
 
   await prisma.attemptAnswer.update({
     where: { attemptQuestionId },
@@ -114,7 +112,7 @@ export async function addTimeSpentAction(attemptQuestionId: string, deltaSeconds
 
   await prisma.attemptAnswer.update({
     where: { attemptQuestionId },
-    data: { timeSpentSeconds: { increment: Math.min(300, Math.round(deltaSeconds)) } },
+    data: { timeSpentSeconds: { increment: cappedTimeIncrement(deltaSeconds) } },
   });
 }
 
@@ -133,27 +131,25 @@ export async function submitAttemptAction(attemptId: string) {
 
   const isExpired = new Date() >= attempt.endsAt;
 
-  let correct = 0;
-  let incorrect = 0;
-  let skipped = 0;
+  const { correct, incorrect, skipped, attempted, score, accuracy } = calculateAttemptScore(
+    attempt.attemptQuestions.map((aq) => ({
+      selectedLabel: aq.answer?.selectedOptionLabel ?? null,
+      correctLabel: aq.correctAnswerSnapshot,
+    })),
+    attempt.mockTest.marksPerCorrect,
+    attempt.mockTest.negativeMarksPerIncorrect
+  );
 
+  // Persist per-question correctness for the results review screen.
   for (const aq of attempt.attemptQuestions) {
     const selected = aq.answer?.selectedOptionLabel ?? null;
-    if (selected == null) {
-      skipped++;
-      continue;
-    }
-    const isCorrect = selected === aq.correctAnswerSnapshot;
-    if (aq.answer) {
-      await prisma.attemptAnswer.update({ where: { attemptQuestionId: aq.id }, data: { isCorrect } });
-    }
-    if (isCorrect) correct++;
-    else incorrect++;
+    if (selected == null || !aq.answer) continue;
+    await prisma.attemptAnswer.update({
+      where: { attemptQuestionId: aq.id },
+      data: { isCorrect: selected === aq.correctAnswerSnapshot },
+    });
   }
 
-  const attempted = correct + incorrect;
-  const score = correct * attempt.mockTest.marksPerCorrect - incorrect * attempt.mockTest.negativeMarksPerIncorrect;
-  const accuracy = attempted > 0 ? (correct / attempted) * 100 : 0;
   const now = new Date();
   const totalTimeSeconds = Math.round((now.getTime() - attempt.startedAt.getTime()) / 1000);
 
