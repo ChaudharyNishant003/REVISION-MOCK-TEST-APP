@@ -32,7 +32,9 @@ export function decrypt(encoded: string): string {
   const iv = raw.subarray(0, IV_LENGTH);
   const authTag = raw.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
   const ciphertext = raw.subarray(IV_LENGTH + TAG_LENGTH);
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  // authTagLength is passed explicitly: without it Node emits a deprecation warning and
+  // would accept a short (weakened) tag from a malformed value instead of rejecting it.
+  const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
   decipher.setAuthTag(authTag);
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
 }

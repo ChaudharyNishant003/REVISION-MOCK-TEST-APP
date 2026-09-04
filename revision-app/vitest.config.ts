@@ -11,7 +11,8 @@ export default defineConfig({
     // Component tests opt into jsdom per-file via a `@vitest-environment jsdom` docblock
     // (environmentMatchGlobs was removed in Vitest 5).
     setupFiles: ["tests/setup/env.ts"],
-    globalSetup: ["tests/setup/globalSetup.ts"],
+    // No globalSetup: the test database is migrated lazily by tests/setup/testDb.ts,
+    // which only integration tests import — unit and component runs stay fast.
     include: ["tests/**/*.test.{ts,tsx}"],
   },
 });
