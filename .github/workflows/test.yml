@@ -14,6 +14,13 @@ jobs:
   fast-checks:
     name: Typecheck, lint, unit/integration/component/security tests
     runs-on: ubuntu-latest
+    env:
+      # prisma.config.ts calls env("DATABASE_URL") while *loading* the config, so even
+      # `prisma generate` needs this set — there's no .env file in CI to supply it.
+      # tests/setup/env.ts pins the same value again at Vitest runtime; this just lets
+      # `prisma generate` itself succeed. AUTH_SECRET has its own fallback in that file,
+      # so it doesn't need to be set here.
+      DATABASE_URL: file:./prisma/test.db
     steps:
       - uses: actions/checkout@v4
 
@@ -28,10 +35,6 @@ jobs:
 
       - run: npx tsc --noEmit
       - run: npm run lint
-
-      # tests/setup/env.ts pins DATABASE_URL to a dedicated prisma/test.db (never
-      # prisma/dev.db) and provides a throwaway AUTH_SECRET fallback — no CI-specific
-      # env vars are needed for this job.
       - run: npm test
 
   e2e:
@@ -40,6 +43,13 @@ jobs:
     # Only on PRs and manual runs — the browser suite is slow, so pushes to master
     # (already covered by fast-checks) don't pay that cost on every commit.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    env:
+      # Needed from `prisma generate` onward (see the comment in fast-checks above),
+      # then reused by `next build` and by playwright.config.ts's webServer.
+      DATABASE_URL: file:./prisma/e2e.db
+      # next start (production mode) refuses to run without this; no default exists
+      # the way AUTH_SECRET's Vitest-only fallback does. Throwaway CI value only.
+      AUTH_SECRET: ci-only-throwaway-secret-not-used-in-production-0123456789
     steps:
       - uses: actions/checkout@v4
 
@@ -59,18 +69,7 @@ jobs:
       - run: npx playwright install --with-deps chrome
 
       - run: npm run build
-        env:
-          # Build-time only; no page queries the DB during static generation, but this
-          # keeps the build's environment consistent with the E2E run that follows it.
-          DATABASE_URL: file:./prisma/e2e.db
-          AUTH_SECRET: ci-only-throwaway-secret-not-used-in-production-0123456789
-
       - run: npx playwright test
-        env:
-          # playwright.config.ts's webServer already pins DATABASE_URL to prisma/e2e.db;
-          # AUTH_SECRET has no such default and next start (production mode) refuses to
-          # run without one.
-          AUTH_SECRET: ci-only-throwaway-secret-not-used-in-production-0123456789
 
       - uses: actions/upload-artifact@v4
         if: always()
