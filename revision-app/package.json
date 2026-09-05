@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "vitest run tests/integration",
+    "e2e:serve": "node scripts/prepare-e2e-db.mjs && next start -p 3100",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",
