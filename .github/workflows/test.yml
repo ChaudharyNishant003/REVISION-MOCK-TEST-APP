@@ -33,6 +33,12 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
 
+      # tsconfig.json's `include` covers .next/types/**, which the Next.js TS plugin
+      # relies on to validate page/layout/route export signatures — `next typegen`
+      # generates just those types without a full build. Without this, a fresh
+      # checkout has no .next/ at all and tsc fails immediately (confirmed locally
+      # by removing .next/ and re-running tsc).
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
