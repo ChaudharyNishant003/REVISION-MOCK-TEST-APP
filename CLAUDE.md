@@ -18,7 +18,10 @@ All run from `revision-app/`:
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — ESLint (flat config, `eslint-config-next`)
-- No test framework is configured — there is no `test` script and no test files.
+- `npm test` — Vitest: unit + integration + component + static-security tests (`tests/unit/`, `tests/integration/`, `tests/component/`, `tests/security/`). Integration tests use a dedicated `prisma/test.db`, never `prisma/dev.db`.
+- `npm run test:e2e` — Playwright, real system Chrome (`channel: "chrome"`, no browser download): E2E journeys, accessibility (axe-core), and performance budgets under `revision-app/tests/e2e-and-a11y/`. Builds and serves the app against a dedicated `prisma/e2e.db` on port 3100.
+- `.github/workflows/test.yml` runs `npm test` on every push; the Playwright suite runs on pull requests and manual dispatch.
+- See `docs/QA-TEST-PLAN.md`, `docs/traceability-matrix.md`, `docs/defect-log.md`, and `docs/MANUAL-TEST-CHECKLIST.md` for what's covered, what's open, and what still needs a human or a live OpenAI key.
 
 Database (Prisma 7, SQLite via `better-sqlite3`, config in [prisma.config.ts](revision-app/prisma.config.ts) rather than `package.json`):
 - `npx prisma generate` — regenerate the client after schema changes
