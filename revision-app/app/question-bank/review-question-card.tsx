@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 
 import { approveQuestionAction, rejectQuestionAction } from "@/lib/actions/questionReview";
 
@@ -34,6 +34,8 @@ export default function ReviewQuestionCard({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [rejectPending, startRejectTransition] = useTransition();
+  // Several of these cards render at once, so ids must be unique per instance.
+  const fieldId = useId();
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -62,13 +64,20 @@ export default function ReviewQuestionCard({
         {error ? <div className="form-error" style={{ marginBottom: "10px" }}>{error}</div> : null}
 
         <div className="field" style={{ marginBottom: "12px" }}>
-          <label>Question text</label>
-          <textarea name="questionText" defaultValue={question.questionText} required maxLength={2000} rows={2} />
+          <label htmlFor={`${fieldId}-text`}>Question text</label>
+          <textarea
+            id={`${fieldId}-text`}
+            name="questionText"
+            defaultValue={question.questionText}
+            required
+            maxLength={2000}
+            rows={2}
+          />
         </div>
 
         <div className="field" style={{ marginBottom: "14px", maxWidth: "420px" }}>
-          <label>Topic</label>
-          <select name="topicId" defaultValue={question.topicId ?? ""}>
+          <label htmlFor={`${fieldId}-topic`}>Topic</label>
+          <select id={`${fieldId}-topic`} name="topicId" defaultValue={question.topicId ?? ""}>
             <option value="">No topic</option>
             {topics.map((t) => (
               <option value={t.id} key={t.id}>
@@ -78,8 +87,9 @@ export default function ReviewQuestionCard({
           </select>
         </div>
 
-        <div className="field">
-          <label>Options — select the correct answer</label>
+        {/* A radio group needs a group label, which only fieldset/legend provides. */}
+        <fieldset className="field" style={{ border: 0, margin: 0, padding: 0 }}>
+          <legend>Options — select the correct answer</legend>
           {question.options.map((option) => (
             <label className="review-option-row" key={option.id}>
               <input
@@ -92,10 +102,17 @@ export default function ReviewQuestionCard({
               <input type="hidden" name="optionId" value={option.id} />
               <input type="hidden" name="optionLabel" value={option.label} />
               <span className="option-label">{option.label}</span>
-              <input type="text" name="optionText" defaultValue={option.text} required maxLength={500} />
+              <input
+                type="text"
+                name="optionText"
+                defaultValue={option.text}
+                required
+                maxLength={500}
+                aria-label={`Option ${option.label} text`}
+              />
             </label>
           ))}
-        </div>
+        </fieldset>
 
         <div className="review-actions">
           <div style={{ display: "flex", gap: "10px" }}>

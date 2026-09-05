@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 
 import { prisma } from "@/lib/prisma";
 import { setupTestDatabase, resetDatabase } from "../setup/testDb";
-import { createUser, createExam, createFullAvailability, createSyllabus } from "../fixtures/factories";
+import { createUser, createExam, createFullAvailability, createSyllabus, type TopicSpec } from "../fixtures/factories";
 import { generateInitialPlan, scheduleTopicIntoPlan } from "@/lib/scheduler/generatePlan";
 import { completeRevisionTask } from "@/lib/scheduler/completeRevision";
 import { syncOverdueTasks, getTodaysTasks, getRevisionProgressSummary } from "@/lib/scheduler/dailyTasks";
@@ -21,7 +21,9 @@ describe("Revision scheduler", () => {
     await resetDatabase();
   });
 
-  async function setupExamWithTopics(topicSpecs = [{ name: "Topic A" }, { name: "Topic B" }, { name: "Topic C" }]) {
+  async function setupExamWithTopics(
+    topicSpecs: TopicSpec[] = [{ name: "Topic A" }, { name: "Topic B" }, { name: "Topic C" }]
+  ) {
     const user = await createUser();
     const exam = await createExam(user.id, { daysOut: 60 });
     await createFullAvailability(exam.id);

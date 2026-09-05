@@ -53,12 +53,18 @@ export default function QuestionBankList({
     <section className="tasks-section" style={{ marginTop: 0 }}>
       <div className="inline-form" style={{ marginBottom: "14px" }}>
         <div className="field">
-          <label>Search</label>
-          <input type="text" placeholder="Filter by question text" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <label htmlFor="bank-search">Search</label>
+          <input
+            id="bank-search"
+            type="text"
+            placeholder="Filter by question text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <div className="field" style={{ minWidth: "180px", flex: "0 0 180px" }}>
-          <label>Question set</label>
-          <select value={setFilter} onChange={(e) => setSetFilter(e.target.value)}>
+          <label htmlFor="bank-set-filter">Question set</label>
+          <select id="bank-set-filter" value={setFilter} onChange={(e) => setSetFilter(e.target.value)}>
             <option value="all">All sets</option>
             {questionSets.map((s) => (
               <option value={s.id} key={s.id}>
@@ -68,8 +74,8 @@ export default function QuestionBankList({
           </select>
         </div>
         <div className="field" style={{ minWidth: "180px", flex: "0 0 180px" }}>
-          <label>Topic</label>
-          <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
+          <label htmlFor="bank-topic-filter">Topic</label>
+          <select id="bank-topic-filter" value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
             <option value="all">All topics</option>
             {topicFilterOptions.map((t) => (
               <option value={t.id} key={t.id}>

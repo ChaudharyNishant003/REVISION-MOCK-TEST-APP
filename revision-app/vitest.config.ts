@@ -8,7 +8,10 @@ export default defineConfig({
     globals: true,
     // Integration tests share one SQLite test database, so they must not run concurrently.
     fileParallelism: false,
-    // The first integration file pays for `prisma migrate deploy` (~20s) in its beforeAll.
+    // isolate:false was tried to let testDb.ts's migration cache span files, but it also
+    // shares jsdom/module state across component test *files*, which broke RTL's per-file
+    // cleanup (elements from one file's tests leaked into another's). Keep the default
+    // (isolate:true) — see testDb.ts for how the migration cost is avoided instead.
     hookTimeout: 90_000,
     testTimeout: 20_000,
     // Component tests opt into jsdom per-file via a `@vitest-environment jsdom` docblock

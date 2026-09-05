@@ -41,13 +41,31 @@ Severity rubric (judged by "can this mislead the user or lose their data?"):
 
 ---
 
+---
+
+## DEFECT-003 — 19 form labels not associated with their inputs
+
+| Field | Detail |
+|---|---|
+| **Severity** | Medium |
+| **Module** | Syllabus Management, Question Review, Mock Test Creation (frontend) |
+| **Found by** | `tests/component/question-bank-list.test.tsx` (Phase 3 component run) — `getByLabelText` failed to locate the "Question set" and "Topic" filter selects |
+| **Expected** | Every `<label>` is associated with its control (`htmlFor`/`id`, or wraps it), so a screen reader announces what the field is for and clicking the label focuses the control. |
+| **Actual** | 19 labels across 5 files were bare `<label>Text</label>` with no relationship to the adjacent input/select: `review-question-card.tsx` (3), `add-topic-form.tsx` (4), `topic-row.tsx` (4), `add-chapter-form.tsx` (1), `create-test-form.tsx` (7). A screen reader user could not tell which field "Minutes," "Difficulty," etc. referred to; clicking a label did nothing. |
+| **Root cause** | Labels were written without `htmlFor` from the start; several of these components render multiple times per page (one row per topic/question), so a naive static `id` would have caused duplicate-id collisions across instances. |
+| **Impact** | Accessibility — the app was usable visually but not with assistive technology across most of its data-entry surfaces. No data-correctness impact. |
+| **Fix** | Added `useId()` per component instance and wired every label to its control via `htmlFor`/`id`; the radio group in the review card got a proper `<fieldset><legend>` instead of a floating label, since a label can't describe a group of inputs. |
+| **Status** | ✅ Fixed — verified by the same component tests now passing via `getByLabelText`, and a repo-wide `grep` confirming zero remaining bare `<label>` tags. |
+
+---
+
 ## Summary
 
 | Severity | Open | Fixed |
 |---|---|---|
 | Critical | 0 | 0 |
 | High | 0 | 0 |
-| Medium | 0 | 1 |
+| Medium | 0 | 2 |
 | Low | 0 | 1 |
 
-_Last updated: Phase 2 (integration tests) complete — 199/199 passing across 15 files._
+_Last updated: Phase 3 (component tests) complete — 229/229 passing across 18 files._

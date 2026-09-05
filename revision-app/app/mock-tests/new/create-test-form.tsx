@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useId } from "react";
 
 import { createMockTestAction, type FormState } from "@/lib/actions/mockTestConfig";
 
@@ -15,6 +15,7 @@ const initialState: FormState = null;
 
 export default function CreateTestForm({ questions }: { questions: QuestionRow[] }) {
   const [state, formAction, pending] = useActionState(createMockTestAction, initialState);
+  const fieldId = useId();
   const [search, setSearch] = useState("");
   const [setFilter, setSetFilter] = useState("all");
   const [topicFilter, setTopicFilter] = useState("all");
@@ -54,20 +55,20 @@ export default function CreateTestForm({ questions }: { questions: QuestionRow[]
 
       <div className="inline-form" style={{ marginBottom: "18px" }}>
         <div className="field">
-          <label>Test name</label>
-          <input name="name" type="text" placeholder="Mock Test 2" required maxLength={120} />
+          <label htmlFor={`${fieldId}-name`}>Test name</label>
+          <input id={`${fieldId}-name`} name="name" type="text" placeholder="Mock Test 2" required maxLength={120} />
         </div>
         <div className="field" style={{ minWidth: "110px", flex: "0 0 110px" }}>
-          <label>Minutes</label>
-          <input name="timeLimitMinutes" type="number" min={1} max={300} defaultValue={30} required />
+          <label htmlFor={`${fieldId}-timeLimitMinutes`}>Minutes</label>
+          <input id={`${fieldId}-timeLimitMinutes`} name="timeLimitMinutes" type="number" min={1} max={300} defaultValue={30} required />
         </div>
         <div className="field" style={{ minWidth: "130px", flex: "0 0 130px" }}>
-          <label>Marks / correct</label>
-          <input name="marksPerCorrect" type="number" step="0.25" min={0.25} defaultValue={1} required />
+          <label htmlFor={`${fieldId}-marksPerCorrect`}>Marks / correct</label>
+          <input id={`${fieldId}-marksPerCorrect`} name="marksPerCorrect" type="number" step="0.25" min={0.25} defaultValue={1} required />
         </div>
         <div className="field" style={{ minWidth: "150px", flex: "0 0 150px" }}>
-          <label>Negative / incorrect</label>
-          <input name="negativeMarksPerIncorrect" type="number" step="0.25" min={0} defaultValue={0.25} required />
+          <label htmlFor={`${fieldId}-negativeMarksPerIncorrect`}>Negative / incorrect</label>
+          <input id={`${fieldId}-negativeMarksPerIncorrect`} name="negativeMarksPerIncorrect" type="number" step="0.25" min={0} defaultValue={0.25} required />
         </div>
       </div>
 
@@ -76,12 +77,18 @@ export default function CreateTestForm({ questions }: { questions: QuestionRow[]
       </div>
       <div className="inline-form" style={{ marginBottom: "10px" }}>
         <div className="field">
-          <label>Search</label>
-          <input type="text" placeholder="Filter by question text" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <label htmlFor={`${fieldId}-search`}>Search</label>
+          <input
+            id={`${fieldId}-search`}
+            type="text"
+            placeholder="Filter by question text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <div className="field" style={{ minWidth: "170px", flex: "0 0 170px" }}>
-          <label>Question set</label>
-          <select value={setFilter} onChange={(e) => setSetFilter(e.target.value)}>
+          <label htmlFor={`${fieldId}-set-filter`}>Question set</label>
+          <select id={`${fieldId}-set-filter`} value={setFilter} onChange={(e) => setSetFilter(e.target.value)}>
             <option value="all">All sets</option>
             {questionSets.map((s) => (
               <option value={s.id} key={s.id}>
@@ -91,8 +98,8 @@ export default function CreateTestForm({ questions }: { questions: QuestionRow[]
           </select>
         </div>
         <div className="field" style={{ minWidth: "170px", flex: "0 0 170px" }}>
-          <label>Topic</label>
-          <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
+          <label htmlFor={`${fieldId}-topic-filter`}>Topic</label>
+          <select id={`${fieldId}-topic-filter`} value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
             <option value="all">All topics</option>
             {topics.map((t) => (
               <option value={t.id} key={t.id}>

@@ -144,7 +144,7 @@ describe("Cross-user data isolation", () => {
 
   it("keeps syllabus trees separate", async () => {
     const alice = await createPopulatedUser("alice");
-    const bob = await createPopulatedUser("bob");
+    await createPopulatedUser("bob"); // must exist in the DB so the negative assertion below is meaningful
 
     const aliceExam = await getCurrentUserExam(alice.user.id);
     const topicNames = aliceExam!.subjects.flatMap((s) => s.chapters.flatMap((c) => c.topics.map((t) => t.name)));

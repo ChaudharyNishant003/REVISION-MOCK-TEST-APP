@@ -1,18 +1,24 @@
 import { execSync } from "child_process";
-import { rmSync } from "fs";
-import path from "path";
 
 import { prisma } from "@/lib/prisma";
 
 /**
  * Lazy test-database setup. Only integration tests import this, so unit and component
- * runs never pay the migration cost. The migration runs at most once per vitest process.
+ * runs never pay the migration cost.
+ *
+ * Vitest gives each test *file* its own isolated module registry by default (verified:
+ * disabling that isolation to share a migration cache across files also shared jsdom
+ * state across component test files and broke cleanup between them — not worth it).
+ * So an in-memory "already migrated" flag can't be shared across files. Instead this
+ * relies on `prisma migrate deploy` itself being a fast no-op once every migration is
+ * already applied — only the first file pays the real cost of building the schema from
+ * scratch; every file after that just gets a near-instant "nothing to do" check.
  *
  * Safety: DATABASE_URL is pinned to prisma/test.db in tests/setup/env.ts, so nothing here
- * can reach prisma/dev.db, which holds real user data.
+ * can reach prisma/dev.db, which holds real user data. The database is never deleted here —
+ * `resetDatabase()` (called in each file's beforeEach) clears row data between tests instead,
+ * so re-running the suite reuses the same schema rather than rebuilding it every time.
  */
-let migrated: Promise<void> | null = null;
-
 function assertTestDatabase() {
   const url = process.env.DATABASE_URL ?? "";
   if (!url.includes("test.db")) {
@@ -20,21 +26,12 @@ function assertTestDatabase() {
   }
 }
 
-export function setupTestDatabase(): Promise<void> {
+export async function setupTestDatabase(): Promise<void> {
   assertTestDatabase();
-  if (!migrated) {
-    migrated = (async () => {
-      const testDbPath = path.join(process.cwd(), "prisma", "test.db");
-      rmSync(testDbPath, { force: true });
-      rmSync(`${testDbPath}-journal`, { force: true });
-
-      execSync("npx prisma migrate deploy", {
-        stdio: "pipe",
-        env: { ...process.env, DATABASE_URL: "file:./prisma/test.db" },
-      });
-    })();
-  }
-  return migrated;
+  execSync("npx prisma migrate deploy", {
+    stdio: "pipe",
+    env: { ...process.env, DATABASE_URL: "file:./prisma/test.db" },
+  });
 }
 
 /**

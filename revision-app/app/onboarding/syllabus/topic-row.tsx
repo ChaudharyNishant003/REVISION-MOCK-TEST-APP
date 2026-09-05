@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 
 import { updateTopicAction, deleteTopicAction } from "@/lib/actions/syllabus";
 
@@ -14,6 +14,7 @@ type Topic = {
 
 export default function TopicRow({ topic }: { topic: Topic }) {
   const [editing, setEditing] = useState(false);
+  const fieldId = useId();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -34,24 +35,24 @@ export default function TopicRow({ topic }: { topic: Topic }) {
         <input type="hidden" name="topicId" value={topic.id} />
         {error ? <div className="form-error" style={{ width: "100%" }}>{error}</div> : null}
         <div className="field">
-          <label>Topic</label>
-          <input name="name" type="text" defaultValue={topic.name} required autoFocus />
+          <label htmlFor={`${fieldId}-name`}>Topic</label>
+          <input id={`${fieldId}-name`} name="name" type="text" defaultValue={topic.name} required autoFocus />
         </div>
         <div className="field" style={{ minWidth: "90px", flex: "0 0 90px" }}>
-          <label>Minutes</label>
-          <input name="estimatedRevisionMinutes" type="number" min={5} max={480} defaultValue={topic.estimatedRevisionMinutes} />
+          <label htmlFor={`${fieldId}-estimatedRevisionMinutes`}>Minutes</label>
+          <input id={`${fieldId}-estimatedRevisionMinutes`} name="estimatedRevisionMinutes" type="number" min={5} max={480} defaultValue={topic.estimatedRevisionMinutes} />
         </div>
         <div className="field" style={{ minWidth: "110px", flex: "0 0 110px" }}>
-          <label>Difficulty</label>
-          <select name="difficulty" defaultValue={topic.difficulty}>
+          <label htmlFor={`${fieldId}-difficulty`}>Difficulty</label>
+          <select id={`${fieldId}-difficulty`} name="difficulty" defaultValue={topic.difficulty}>
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>
           </select>
         </div>
         <div className="field" style={{ minWidth: "110px", flex: "0 0 110px" }}>
-          <label>Importance</label>
-          <select name="importance" defaultValue={topic.importance}>
+          <label htmlFor={`${fieldId}-importance`}>Importance</label>
+          <select id={`${fieldId}-importance`} name="importance" defaultValue={topic.importance}>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
